@@ -1,0 +1,7 @@
+[package]
+name = "mancala"
+version = "0.1.0"
+authors = ["Nicholas Yager <yager@nicholasyager.com>"]
+
+[dependencies]
+rand = "0.3"
