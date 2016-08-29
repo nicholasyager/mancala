@@ -5,3 +5,5 @@ authors = ["Nicholas Yager <yager@nicholasyager.com>"]
 
 [dependencies]
 rand = "0.3"
+docopt = "0.6"
+rustc-serialize = "0.3" 

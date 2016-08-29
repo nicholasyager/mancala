@@ -1,10 +1,33 @@
 extern crate rand;
 
 use rand::Rng;
-use std::io;
+
+extern crate rustc_serialize;
+extern crate docopt;
+
+use docopt::Docopt;
+
+const USAGE: &'static str = "
+Mancala Simulator
+
+Usage:
+  mancala <strategy1> <strategy2> [--stones=<num>]
+
+Options:
+  -h --help           Show this screen.
+  strategy1           The strategy player one will use.
+  strategy2           The strategy player two will use.
+  --stones=<num>      The number of stones per cell [default: 3]
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    flag_stones: i32,
+    arg_strategy1: String,
+    arg_strategy2: String,
+}
 
 struct Board {
-    stones_per_cell: i32,
     cells: Vec<i32>
 }
 
@@ -16,7 +39,6 @@ impl Board {
         new_cells[7] = 0;
         Board {
             cells: new_cells,
-            stones_per_cell: stones_per_cell
         }
     }
 
@@ -78,15 +100,36 @@ impl Board {
 }
 
 struct Player {
-    number: usize
+    number: usize,
+	strategy: String
 }
 
 
 impl Player {
 
-    fn new(player_number: usize) -> Player {
-        Player {number: player_number}
+    fn new(player_number: usize, strategy: String) -> Player {
+        Player {number: player_number, strategy: strategy}
     }
+
+	fn choose(&self, board: &Board) -> usize {
+		if self.strategy == "points" {
+			// Favor giving yourself points
+			return self.choose_random(board);
+			
+		} else if self.strategy == "theft" {
+			// Favor stealing your opponent's stones
+			return self.choose_random(board);
+	
+		} else if self.strategy == "optimal" {
+			// Maximize points from the two above.
+			return self.choose_random(board);
+
+		} else {
+			// Randomly select a cell to distribute.
+			return self.choose_random(board);
+
+		}
+	}
 
     fn choose_random(&self, board: &Board) -> usize {
         let mut valid_indices: Vec<usize> = Vec::new();
@@ -118,37 +161,38 @@ impl Player {
     fn display(&self, board: &Board) {
             println!("Player {}: {}", self.number, self.score(board));
     }
+
+    fn play(&self, board: &mut Board) {
+        loop {
+            let player1_choice = self.choose(&board);
+            let stones = board.cells[player1_choice];
+            board.distribute(player1_choice);
+
+            if (player1_choice as i32)+ stones != ((self.number as i32)-1)*7 {
+                return;
+            }
+        }
+
+    }
 }
 
 fn main() {
 
-    let mut board = Board::new(3);
-    let player1 = Player::new(1);
-    let player2 = Player::new(2);
+	let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|e| e.exit());
+
+	let stones = args.flag_stones;
+	println!("{}", stones);
+
+    let mut board = Board::new(stones);
+    let player1 = Player::new(1, args.arg_strategy1);
+    let player2 = Player::new(2, args.arg_strategy2);
 
     board.render();
-    while true {
-        
-        while true {
-            let player1_choice = player1.choose_random(&board);
-            let stones = board.cells[player1_choice];
-            board.distribute(player1_choice);
-
-            if (player1_choice as i32)+ stones != 6 {
-                break;
-            }
-        }
-        
-        while true {
-            let player2_choice = player2.choose_random(&board);
-            let stones = board.cells[player2_choice];
-
-            board.distribute(player2_choice);
-            if (player2_choice as i32) + stones != 13 {
-                break
-            }
-
-        }
+    loop {
+        player1.play(&mut board);
+        player2.play(&mut board);
 
         board.render();
         if board.completion_check() {
