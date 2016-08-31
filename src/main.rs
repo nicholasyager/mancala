@@ -71,7 +71,7 @@ impl Board {
     }
 
 
-    fn distribute(&mut self, index: usize) {
+    fn distribute(&mut self, index: usize) -> i32 {
         // Determine the number of stones in the cell
         let mut num_stones = self.cells[index];
 
@@ -88,6 +88,20 @@ impl Board {
             num_stones -= 1;
             cell_index += 1;
         }
+
+        // Steal a stone from the opposite side if the last cell was empty.
+        cell_index -= 1; // Correct the index to be the last one to add a stone
+        if cell_index == 0 {
+            cell_index = 13;
+        }
+        let mut stolen_stones = 0_i32;
+        if self.cells[cell_index] == 1 {
+            // Convert the cell index to the other side of the board.
+            let reciprocal_cell_index = 14 - cell_index;
+            stolen_stones = self.cells[reciprocal_cell_index];
+            self.cells[reciprocal_cell_index] = 0;
+        } 
+        return stolen_stones;
     }
 
     fn render(&self) {
@@ -166,7 +180,8 @@ impl Player {
         loop {
             let player1_choice = self.choose(&board);
             let stones = board.cells[player1_choice];
-            board.distribute(player1_choice);
+            let stolen_stones = board.distribute(player1_choice);
+            board.cells[(self.number-1)*7] += stolen_stones;
 
             if (player1_choice as i32)+ stones != ((self.number as i32)-1)*7 {
                 return;
@@ -183,7 +198,6 @@ fn main() {
                             .unwrap_or_else(|e| e.exit());
 
 	let stones = args.flag_stones;
-	println!("{}", stones);
 
     let mut board = Board::new(stones);
     let player1 = Player::new(1, args.arg_strategy1);
