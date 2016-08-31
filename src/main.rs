@@ -108,7 +108,8 @@ impl Board {
         for cell in &self.cells {
             print!("{}\t", cell);
         }
-        print!{"{}\t{}\n", self.cells[0], self.cells[7]};
+        print!("\n");
+        //print!{"{}\t{}\n", self.cells[0], self.cells[7]};
     }
 
 }
@@ -132,7 +133,12 @@ impl Player {
 			
 		} else if self.strategy == "theft" {
 			// Favor stealing your opponent's stones
-			return self.choose_random(board);
+			let index =  self.choose_theft(board);
+            if index == 14 {
+                return self.choose_random(board);
+            } else {
+                return index;
+            }
 	
 		} else if self.strategy == "optimal" {
 			// Maximize points from the two above.
@@ -145,6 +151,36 @@ impl Player {
 		}
 	}
 
+    /// Chose a cell that will result in theft. If not possilbe, return -1
+    fn choose_theft(&self, board: &Board) -> usize {
+        let mut valid_indices: Vec<usize> = Vec::new();
+        let lower_bound = 1 + ((self.number - 1)*7);
+        let upper_bound = lower_bound + 5;
+        let mut index = lower_bound;
+        while index <= upper_bound{
+            let mut final_index = index + (board.cells[index] as usize);
+            if board.cells[index] == 0 || final_index > upper_bound {
+                index += 1;
+                continue;
+            }
+            if board.cells[final_index] == 0 {
+                valid_indices.push(index as usize);
+            }
+            index += 1;
+        }
+
+        if valid_indices.len() == 0 {
+            return 14;
+        }
+        
+        let random_index: usize = rand::thread_rng().gen_range(0, 
+                                                        valid_indices.len());
+        return valid_indices[random_index];
+
+       
+    }
+
+    /// Choose a random cell on the player's side with stones
     fn choose_random(&self, board: &Board) -> usize {
         let mut valid_indices: Vec<usize> = Vec::new();
         let lower_bound = 1 + ((self.number - 1)*7);
